@@ -7,10 +7,7 @@ from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 import os
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-from my_unet.unet import UNet
+from unet import UNet
 
 from dataset import FITSDataset
 
@@ -50,7 +47,7 @@ def validate_unet(model, val_loader, loss_fn, epoch):
             images, masks = images.to(device), masks.to(device)
             outputs = model(images)
 
-            loss = loss_fn(outputs, masks.squeeze(1).long())
+            loss = loss_fn(outputs, masks)
             val_loss += loss.item()
 
             if batch_idx == 0:
@@ -78,10 +75,9 @@ def train_unet(model, train_loader, val_loader, optimizer, loss_fn, num_epochs=2
             optimizer.zero_grad()  # Reset gradients
 
             # Forward pass
-            outputs = model(images)  # Output shape: (batch, 4, 256, 256)
+            outputs = model(images)  # Output shape: (batch, 3, 256, 256)
 
-            # Compute loss (CrossEntropyLoss expects class labels, not one-hot masks)
-            loss = loss_fn(outputs, masks.squeeze(1).long())  # `masks` should have shape (batch, 256, 256) with values 0-3
+            loss = loss_fn(outputs, masks)  # `masks` should have shape (batch, 256, 256)
 
             # Backpropagation
             loss.backward()
@@ -117,15 +113,15 @@ def train():
     # Initialize the model
     model = UNet(in_channels=3, out_channels=3).to(device)
 
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     # mri_transform = transforms.Compose([
     #     transforms.Normalize(mean=[DATASET_PIXEL_MEAN], std=[DATASET_PIXEL_STD])
-    # ])
+    # ]) # TODO normalize???
 
-    train_dataset = FITSDataset('dataset/train/raw', 'dataset/train/cal')
-    test_dataset = FITSDataset('dataset/test/raw', 'dataset/test/cal')
+    train_dataset = FITSDataset('patches/train/raw', 'patches/train/cal')
+    test_dataset = FITSDataset('patches/test/raw', 'patches/test/cal')
 
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False, num_workers=4)

@@ -6,7 +6,7 @@ from astropy.io import fits
 
 class FITSDataset(Dataset):
     def __init__(self, raw_dir, cal_dir, raw_transform=None, cal_transform=None):
-        self.raw_filenames = sorted([f for f in os.listdir(raw_dir) if f.endswith(('.fit', '.fits'))])
+        self.raw_filenames = sorted([f for f in os.listdir(raw_dir) if f.endswith(('.fit', '.fits')) and os.path.exists(os.path.join(cal_dir, f))])
         self.raw_dir = raw_dir
         self.cal_dir = cal_dir
         self.raw_transform = raw_transform
@@ -42,6 +42,14 @@ class FITSDataset(Dataset):
         cal_path = os.path.join(self.cal_dir, self.raw_filenames[idx])
 
         # Load raw and calibrated images
+
+        # check if file exists
+        if not os.path.exists(raw_path) or not os.path.exists(cal_path):
+            if not os.path.exists(raw_path):
+                print(f"!!! RAW File not found: {raw_path}")
+            if not os.path.exists(cal_path):
+                print(f"!!! CAL File not found: {cal_path}")
+
         raw_image = self._load_fits(raw_path)
         cal_image = self._load_fits(cal_path)
 

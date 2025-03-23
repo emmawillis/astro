@@ -1,0 +1,13 @@
+
+File counts after splitting:
+  train/raw: 17144
+  train/cal: 17144
+  test/raw:  4230
+  test/cal:  4230
+
+All train/cal files have a matching file in train/raw.
+
+All test/cal files have a matching file in test/raw.
+
+Train unique imageIDs: 118
+Test unique imageIDs: 30
