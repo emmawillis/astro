@@ -53,7 +53,7 @@ Alternatively, leave the model output as-is but clamp it before loss:
 outputs = torch.clamp(outputs, 0.0, 1.0)
 
 
-3. Output Channels
+3. Output Channels - FIXED
 You're using out_channels=3 in the model, which is fine since your FITS images were triplicated to 3 channels.
 
 ✅ This makes sense if you're enforcing pixel-wise restoration in all 3 channels.
@@ -71,8 +71,15 @@ Then save the raw float tensor, no argmax.
 -----
 
 TODO
-save best checkpoint
 z-score normalization based on whole dataset
 Transforms like flips etc
+add activation layer at end of unet?
+"
+Your U-Net has no activation at the output. That’s fine for raw regression, but:
 
+Your inputs and outputs are in [0, 1], so consider adding nn.Sigmoid() to self.final_conv1, or clamp the output after forward pass.
 
+Alternatively, leave the model output as-is but clamp it before loss:
+
+outputs = torch.clamp(outputs, 0.0, 1.0)
+"
