@@ -14,12 +14,16 @@ from dataset import FITSDataset
 from skimage.metrics import structural_similarity as ssim_score
 from skimage.metrics import peak_signal_noise_ratio as psnr_score
 
+from astropy.io import fits
+
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 OUTPUT_DIR = "predictions"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+CHECKPOINT_DIR = "checkpoints"
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 def compute_metrics(preds, targets):
     preds = preds.cpu().numpy()
@@ -32,16 +36,23 @@ def compute_metrics(preds, targets):
         psnr_total += psnr_score(target_img, pred_img, data_range=1.0)
     return ssim_total / preds.shape[0], psnr_total / preds.shape[0]
 
-
 def save_predictions(images, outputs, filenames, epoch):
     outputs = torch.clamp(outputs, 0.0, 1.0)
     os.makedirs(f"{OUTPUT_DIR}/epoch{epoch}", exist_ok=True)
-    for i in range(images.shape[0]):
-        pred = outputs[i]
-        save_path = os.path.join(f"{OUTPUT_DIR}/epoch{epoch}", f"{filenames[i]}.png")
-        save_image(pred, save_path)
-        print(f"Saved prediction: {save_path}")
 
+    for i in range(images.shape[0]):
+        pred = outputs[i].squeeze().cpu().numpy()  # shape: (H, W)
+        
+        # Ensure name ends with .fit or .fits
+        base_name = filenames[i]
+        if base_name.endswith(".png"):
+            base_name = base_name[:-4]
+        if not (base_name.endswith(".fit") or base_name.endswith(".fits")):
+            base_name += ".fits"
+
+        save_path = os.path.join(f"{OUTPUT_DIR}/epoch{epoch}", base_name)
+        fits.writeto(save_path, pred, overwrite=True)
+        print(f"Saved prediction: {save_path}")
 
 def validate_unet(model, val_loader, loss_fn, epoch):
     model.eval()
@@ -112,6 +123,15 @@ def train_unet(model, train_loader, val_loader, optimizer, loss_fn, num_epochs=2
             if val_loss < best_loss:
                 best_loss = val_loss
                 patience_counter = 0
+
+                torch.save({
+                    'epoch': epoch + 1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'val_loss': val_loss,
+                }, os.path.join(CHECKPOINT_DIR, "best_model.pt"))
+                print(f"✅ Saved new best model at epoch {epoch+1} with val_loss={val_loss:.4f}")
+
             else:
                 patience_counter += 1
 
@@ -171,4 +191,4 @@ def train():
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False, num_workers=4)
 
-    train_unet(model, train_loader, test_loader, optimizer, loss_fn, num_epochs=50)
+    train_unet(model, train_loader, test_loader, optimizer, loss_fn, num_epochs=100)
