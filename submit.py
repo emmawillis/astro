@@ -8,7 +8,7 @@ executor.update_parameters(
     cpus_per_task=16,
     slurm_time=240,  # Increase time limit to 4 hours (in minutes)
     stderr_to_stdout=True,
-    slurm_name="emma test"
+    slurm_name="astro-emma"
 )
 
 job = executor.submit(train)

@@ -1,3 +1,5 @@
 patches/
 __pycache__
 *.pyc
+logs/
+predictions/

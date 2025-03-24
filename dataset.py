@@ -6,7 +6,10 @@ from astropy.io import fits
 
 class FITSDataset(Dataset):
     def __init__(self, raw_dir, cal_dir, raw_transform=None, cal_transform=None):
-        self.raw_filenames = sorted([f for f in os.listdir(raw_dir) if f.endswith(('.fit', '.fits')) and os.path.exists(os.path.join(cal_dir, f))])
+        self.raw_filenames = sorted([
+            f for f in os.listdir(raw_dir) 
+            if f.endswith(('.fit', '.fits')) and os.path.exists(os.path.join(cal_dir, f))
+        ])
         self.raw_dir = raw_dir
         self.cal_dir = cal_dir
         self.raw_transform = raw_transform
@@ -16,24 +19,24 @@ class FITSDataset(Dataset):
         return len(self.raw_filenames)
 
     def _load_fits(self, filepath):
-        """Loads a FITS file and ensures it has shape (256, 256, 3)."""
+        """Loads a FITS file and returns a (1, 256, 256) tensor normalized to [0, 1]."""
         with fits.open(filepath) as hdul:
             data = hdul[0].data  # Extract the image data
 
         data = np.array(data, dtype=np.float32)
 
-        # Normalize data to [0,1] range (recommended)
-        data_min, data_max = data.min(), data.max()   # TODO do we need to normalize?
+        # Normalize to [0,1]
+        data_min, data_max = data.min(), data.max()
         if data_max - data_min > 0:
             data = (data - data_min) / (data_max - data_min)
         else:
-            data = data * 0  # handle edge case: uniform image
+            data = data * 0  # Uniform fallback
 
-        # Since all are single-channel (256, 256), duplicate to 3 channels # TODO - do we need 3 channels here??
-        if data.ndim == 2:
-            data = np.stack([data] * 3, axis=-1)  # Shape: (256,256,3)
-        else:
-            raise ValueError(f"Unexpected shape {data.shape} for file {filepath}")
+        if data.ndim != 2:
+            raise ValueError(f"Expected 2D image, got shape {data.shape} for file {filepath}")
+
+        # Add channel dimension → shape: (1, 256, 256)
+        data = data[np.newaxis, :, :]
 
         return data
 
@@ -41,9 +44,7 @@ class FITSDataset(Dataset):
         raw_path = os.path.join(self.raw_dir, self.raw_filenames[idx])
         cal_path = os.path.join(self.cal_dir, self.raw_filenames[idx])
 
-        # Load raw and calibrated images
-
-        # check if file exists
+        # Safety check
         if not os.path.exists(raw_path) or not os.path.exists(cal_path):
             if not os.path.exists(raw_path):
                 print(f"!!! RAW File not found: {raw_path}")
@@ -53,11 +54,11 @@ class FITSDataset(Dataset):
         raw_image = self._load_fits(raw_path)
         cal_image = self._load_fits(cal_path)
 
-        # Convert to PyTorch tensor and reorder to (channels, height, width)
-        raw_image = torch.tensor(raw_image, dtype=torch.float32).permute(2, 0, 1)  # (3,256,256)
-        cal_image = torch.tensor(cal_image, dtype=torch.float32).permute(2, 0, 1)  # (3,256,256)
+        # Convert to tensors
+        raw_image = torch.tensor(raw_image, dtype=torch.float32)    # Shape: (1, 256, 256)
+        cal_image = torch.tensor(cal_image, dtype=torch.float32)    # Shape: (1, 256, 256)
 
-        # Apply optional transforms
+        # Optional transforms
         if self.raw_transform:
             raw_image = self.raw_transform(raw_image)
         if self.cal_transform:
