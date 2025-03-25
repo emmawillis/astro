@@ -6,9 +6,9 @@ executor = submitit.AutoExecutor(folder="logs", slurm_max_num_timeout=10)
 executor.update_parameters(
     slurm_gres='gpu:a40:1', 
     cpus_per_task=16,
-    slurm_time=240,  # Increase time limit to 4 hours (in minutes)
+    slurm_time=580,
     stderr_to_stdout=True,
-    slurm_name="astro-emma"
+    slurm_name="200-astro-emma"
 )
 
 job = executor.submit(train)

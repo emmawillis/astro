@@ -191,4 +191,4 @@ def train():
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False, num_workers=4)
 
-    train_unet(model, train_loader, test_loader, optimizer, loss_fn, num_epochs=100)
+    train_unet(model, train_loader, test_loader, optimizer, loss_fn, num_epochs=200)
