@@ -1,3 +1,0 @@
-first run was using MSE instead of L1 Loss
-was also scaling up to 3 channels and then doing something weird when saving predictions
-so changed to just use 1 channel all the way through and to save fits images properly

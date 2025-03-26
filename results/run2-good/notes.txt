@@ -1,2 +1,0 @@
-running 100 epochs with l1 loss and proper channel handling
-plotting metrics
